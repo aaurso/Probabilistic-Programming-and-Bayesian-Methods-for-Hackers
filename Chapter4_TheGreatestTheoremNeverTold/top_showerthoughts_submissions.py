@@ -13,11 +13,8 @@ top_submissions = subreddit.get_top(limit=100)
 
 n_sub = int( sys.argv[1] ) if sys.argv[1] else 1
 
-i = 0
-while i < n_sub:
+for _ in range(n_sub):
     top_submission = next(top_submissions)
-    i+=1
-
 top_post = top_submission.title
 
 upvotes = []

@@ -17,11 +17,11 @@ ids = np.empty(300, dtype=int)
 
 k  = 0
 for page in range(10,0, -1):
-    
+
     r = get( URL, params = {"page":page} )
     data = loads(r.text)
     for event in data:
         ids[k] = ( event["actor"]["id"] )
         k+=1
-  
+
 ids = np.unique( ids.astype(int) )

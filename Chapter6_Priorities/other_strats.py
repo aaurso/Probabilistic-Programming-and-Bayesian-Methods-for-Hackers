@@ -29,7 +29,7 @@ class GeneralBanditStrat(object):
     """
     
     def __init__(self, bandits, choice_function):
-        
+
         self.bandits = bandits
         n_bandits = len(self.bandits)
         self.wins = np.zeros(n_bandits)
