@@ -19,7 +19,7 @@ import argparse as ap
 import string as st
 import random as rd
 
-def calc_delta_r(x_predicted,y_predicted,x_true,y_true): 
+def calc_delta_r(x_predicted,y_predicted,x_true,y_true):
     """ Compute the scalar distance between predicted halo centers
     and the true halo centers. Predictions are matched to the closest
     halo center.
@@ -37,24 +37,16 @@ def calc_delta_r(x_predicted,y_predicted,x_true,y_true):
     num_halos=len(x_true) #Only works for number of halos > 1
     num_configurations=mt.factorial(num_halos) #The number of possible different comb
     configurations=np.zeros([num_halos,num_configurations],int) #The array of combinations
-                                                                #I will pass back
     distances = np.zeros([num_configurations],float) #The array of the distances
-                                                     #for all possible combinations
-    
-    radial_distance=[]  #The vector of distances
-                        #I will pass back
-    
     #Pick a combination of true and predicted 
     a=['01','012'] #Input for the permutations, 01 number halos or 012
     count=0 #For the index of the distances array
     true_halo_indexes=[] #The tuples which will show the order of halos picked
     predicted_halo_indexes=[]
     distances_perm=np.zeros([num_configurations,num_halos],float) #The distance between each
-                                                                  #true and predicted
-                                                                  #halo for every comb
     true_halo_indexes_perm=[] #log of all the permutations of true halos used
     predicted_halo_indexes_perm=[] #log of all the predicted permutations
-    
+
     for  perm in it.permutations(a[num_halos-2],num_halos):
         which_true_halos=[]
         which_predicted_halos=[]
@@ -64,7 +56,7 @@ def calc_delta_r(x_predicted,y_predicted,x_true,y_true):
                                       +(y_true[j]-y_predicted[int(perm[j])])**2)
                                       #This array logs the distance between true and
                                       #predicted halo for ALL configurations
-                                      
+
             which_true_halos.append(j) #log the order in which I try each true halo
             which_predicted_halos.append(int(perm[j])) #log the order in which I true
                                                        #each predicted halo
@@ -72,19 +64,16 @@ def calc_delta_r(x_predicted,y_predicted,x_true,y_true):
                                                         #all of thifferent config
                                                         #true halo indexes
         predicted_halo_indexes_perm.append(which_predicted_halos)
-        
+
         distances[count]=sum(distances_perm[count,0::]) #Find what the total distances
                                                         #are for each configuration
         count=count+1
 
     config = np.where(distances == min(distances))[0][0] #The configuration used is the one
-                                                         #which has the smallest distance
-    radial_distance.append(distances_perm[config,0::]) #Find the tuple of distances that
-                                                       #correspond to this smallest distance
+    radial_distance = [distances_perm[config,0::]]
     true_halo_indexes=true_halo_indexes_perm[config] #Find the tuple of the index which refers
-                                                     #to the smallest distance
     predicted_halo_indexes=predicted_halo_indexes_perm[config]
-            
+
     return radial_distance,true_halo_indexes,predicted_halo_indexes
 
 
@@ -192,27 +181,20 @@ def main_score( nhalo_all, x_true_all, y_true_all, x_ref_all, y_ref_all, sky_pre
     #Load in the sky_ids from the true
     num_halos_total=0 #Keep track of how many halos are input into the metric
 
-        
+
 
     for selectskyinsolutions, sky in enumerate(sky_prediction): #Loop through each line in result.csv and analyse each one
 
 
         nhalo=int(nhalo_all[selectskyinsolutions])#How many halos in the
-                                                       #selected sky?
-        x_true=x_true_all[selectskyinsolutions][0:nhalo]
-        y_true=y_true_all[selectskyinsolutions][0:nhalo]
-                    
+        x_true = x_true_all[selectskyinsolutions][:nhalo]
+        y_true = y_true_all[selectskyinsolutions][:nhalo]
+
         x_predicted=np.array([],dtype=float)
         y_predicted=np.array([],dtype=float)
-        for i in range(nhalo):
+        for _ in range(nhalo):
             x_predicted=np.append(x_predicted,float(sky[0])) #get the predicted values
             y_predicted=np.append(y_predicted,float(sky[1]))
-            #The solution file for the test data provides masses 
-            #to calculate the centre of mass where as the Training_halo.csv
-            #direct provides x_ref y_ref. So in the case of test data
-            #we need to calculate the ref point from the masses using
-            #Get_ref()
-  
         x_ref=x_ref_all[selectskyinsolutions]
         y_ref=y_ref_all[selectskyinsolutions]
 
@@ -232,17 +214,17 @@ def main_score( nhalo_all, x_true_all, y_true_all, x_ref_all, y_ref_all, sky_pre
             theta = convert_to_360([psi], [x_predicted-x_true], [y_predicted-y_true])
             angle=np.append(angle,theta)
 
-        
+
         else:        
             #r_index_index, contains the radial distances of the predicted to
             #true positions. These are found by matching up the true halos to
             #the predicted halos such that the average of all the radial distances
             #is optimal. it also contains indexes of the halos used which are used to
             #show which halo has been matched to which.
-            
+
             r_index_index = calc_delta_r(x_predicted, y_predicted, x_true, \
                                          y_true)
-  
+
             r=np.append(r,r_index_index[0][0])
             halo_index= r_index_index[1] #The true halos indexes matched with the 
             predicted_index=r_index_index[2] #predicted halo index
@@ -256,18 +238,18 @@ def main_score( nhalo_all, x_true_all, y_true_all, x_ref_all, y_ref_all, sky_pre
                                                #position wrt to the halo and
                                                # add to the vector angle
 
-    
+
     # Find what the average distance the estimate is from the halo position
     av_r=sum(r)/len(r)
-    
+
     #In order to quantify the orientation invariance we will express each angle 
     # as a vector and find the average vector
     #R_bar^2=(1/N Sum^Ncos(theta))^2+(1/N Sum^Nsin(theta))**2
-    
+
     N = float(num_halos_total)
     angle_vec = np.sqrt(( 1.0/N * sum(np.cos(angle)) )**2 + \
         ( 1.0/N * sum(np.sin(angle)) )**2)
-    
+
     W1=1./1000. #Weight the av_r such that < 1 is a good score > 1 is not so good.
     W2=1.
     metric = W1*av_r + W2*angle_vec #Weighted metric, weights TBD
@@ -283,13 +265,8 @@ def main(user_fname, fname):
 
     r=np.array([],dtype=float) # The array which I will log all the calculated radial distances
     angle=np.array([],dtype=float) #The array which I will log all the calculated angles
-    #Load in the sky_ids from the true
-    
-    true_sky_id=[]
     sky_loader = c.reader(open(fname, 'rb')) #Load in the sky_ids from the solution file
-    for row in sky_loader:
-        true_sky_id.append(row[0])
-
+    true_sky_id = [row[0] for row in sky_loader]
     #Load in the true values from the solution file
 
     nhalo_all=np.loadtxt(fname,usecols=(1,),delimiter=',',skiprows=1)
@@ -298,17 +275,13 @@ def main(user_fname, fname):
     x_ref_all=np.loadtxt(fname,usecols=(2,),delimiter=',',skiprows=1)
     y_ref_all=np.loadtxt(fname,usecols=(3,),delimiter=',',skiprows=1)
 
-    
-    for row in sky_loader:
-        true_sky_id.append(row[1])
-        
 
-    
+    true_sky_id.extend(row[1] for row in sky_loader)
     num_halos_total=0 #Keep track of how many halos are input into the metric
 
 
     sky_prediction = c.reader(open(user_fname, 'rb')) #Open the result.csv   
-   
+
     try: #See if the input file from user has a header on it
          #with open('JoyceTest/trivialUnitTest_Pred.txt', 'r') as f:
         with open(user_fname, 'r') as f:   
@@ -320,13 +293,11 @@ def main(user_fname, fname):
     except :
         print('THE INPUT FILE APPEARS TO HAVE A HEADER, SKIPPING THE FIRST LINE')
         skip_header = sky_prediction.next()
-        
+
 
     for sky in sky_prediction: #Loop through each line in result.csv and analyse each one
         sky_id = str(sky[0]) #Get the sky_id of the input
         does_it_exist=true_sky_id.count(sky_id) #Is the input sky_id
-                                                #from user a real one?
-        
         if does_it_exist > 0: #If it does then find the matching solutions to the sky_id
                             selectskyinsolutions=true_sky_id.index(sky_id)-1
         else: #Otherwise exit
@@ -335,10 +306,9 @@ def main(user_fname, fname):
 
 
         nhalo=int(nhalo_all[selectskyinsolutions])#How many halos in the
-                                                       #selected sky?
-        x_true=x_true_all[selectskyinsolutions][0:nhalo]
-        y_true=y_true_all[selectskyinsolutions][0:nhalo]
-                    
+        x_true = x_true_all[selectskyinsolutions][:nhalo]
+        y_true = y_true_all[selectskyinsolutions][:nhalo]
+
         x_predicted=np.array([],dtype=float)
         y_predicted=np.array([],dtype=float)
         for i in range(nhalo):
@@ -349,9 +319,6 @@ def main(user_fname, fname):
             #direct provides x_ref y_ref. So in the case of test data
             #we need to calculae the ref point from the masses using
             #Get_ref()
-  
-        x_ref=x_ref_all[selectskyinsolutions]
-        y_ref=y_ref_all[selectskyinsolutions]
 
         num_halos_total=num_halos_total+nhalo
 
@@ -369,20 +336,23 @@ def main(user_fname, fname):
             theta = convert_to_360([psi], [x_predicted-x_true], [y_predicted-y_true])
             angle=np.append(angle,theta)
 
-        
-        else:        
+
+        else:
             #r_index_index, contains the radial distances of the predicted to
             #true positions. These are found by matching up the true halos to
             #the predicted halos such that the average of all the radial distances
             #is optimal. it also contains indexes of the halos used which are used to
             #show which halo has been matched to which.
-            
+
             r_index_index = calc_delta_r(x_predicted, y_predicted, x_true, \
                                          y_true)
-  
+
             r=np.append(r,r_index_index[0][0])
             halo_index= r_index_index[1] #The true halos indexes matched with the 
             predicted_index=r_index_index[2] #predicted halo index
+
+            x_ref=x_ref_all[selectskyinsolutions]
+            y_ref=y_ref_all[selectskyinsolutions]
 
             angle=np.append(angle,calc_theta\
                                   (x_predicted[predicted_index],\
@@ -390,21 +360,21 @@ def main(user_fname, fname):
                                    x_true[halo_index],\
                                    y_true[halo_index],x_ref,\
                                    y_ref)) # Find the angles of the predicted
-                                               #position wrt to the halo and
-                                               # add to the vector angle
+                                                       #position wrt to the halo and
+                                                       # add to the vector angle
 
-    
+
     # Find what the average distance the estimate is from the halo position
     av_r=sum(r)/len(r)
-    
+
     #In order to quantify the orientation invariance we will express each angle 
     # as a vector and find the average vector
     #R_bar^2=(1/N Sum^Ncos(theta))^2+(1/N Sum^Nsin(theta))**2
-    
+
     N = float(num_halos_total)
     angle_vec = np.sqrt(( 1.0/N * sum(np.cos(angle)) )**2 + \
         ( 1.0/N * sum(np.sin(angle)) )**2)
-    
+
     W1=1./1000. #Weight the av_r such that < 1 is a good score > 1 is not so good.
     W2=1.
     metric = W1*av_r + W2*angle_vec #Weighted metric, weights TBD
@@ -424,7 +394,7 @@ if __name__ == "__main__":
     user_fname=args.inputfile[0]
     filename = (args.reffile[0]).count('Training_halos.csv')
     if filename == 0:
-        fname=args.reffile[0]+str('Training_halos.csv')
+        fname = f'{args.reffile[0]}Training_halos.csv'
     else:
         fname=args.reffile[0]
 
